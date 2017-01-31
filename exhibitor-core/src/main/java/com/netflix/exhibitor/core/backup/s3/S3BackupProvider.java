@@ -57,7 +57,7 @@ public class S3BackupProvider implements BackupProvider
     private final S3Client s3Client;
 
     private static final BackupConfigSpec CONFIG_THROTTLE = new BackupConfigSpec("throttle", "Throttle (bytes/ms)", "Data throttling. Maximum bytes per millisecond.", Integer.toString(1024 * 1024), BackupConfigSpec.Type.INTEGER);
-    private static final BackupConfigSpec CONFIG_BUCKET = new BackupConfigSpec("bucket-name", "S3 Bucket Name", "The S3 bucket to use", "", BackupConfigSpec.Type.STRING);
+    protected static final BackupConfigSpec CONFIG_BUCKET = new BackupConfigSpec("bucket-name", "S3 Bucket Name", "The S3 bucket to use", "", BackupConfigSpec.Type.STRING);
     private static final BackupConfigSpec CONFIG_KEY_PREFIX = new BackupConfigSpec("key-prefix", "S3 Key Prefix", "The prefix for S3 backup keys", "exhibitor-backup", BackupConfigSpec.Type.STRING);
     private static final BackupConfigSpec CONFIG_MAX_RETRIES = new BackupConfigSpec("max-retries", "Max Retries", "Maximum retries when uploading/downloading S3 data", "3", BackupConfigSpec.Type.INTEGER);
     private static final BackupConfigSpec CONFIG_RETRY_SLEEP_MS = new BackupConfigSpec("retry-sleep-ms", "Retry Sleep (ms)", "Sleep time in milliseconds when retrying", "1000", BackupConfigSpec.Type.INTEGER);
@@ -170,7 +170,7 @@ public class S3BackupProvider implements BackupProvider
         return result;
     }
 
-    private void multiPartUpload(File source, Map<String, String> configValues, RetryPolicy retryPolicy, Throttle throttle, String key) throws Exception
+    protected void multiPartUpload(File source, Map<String, String> configValues, RetryPolicy retryPolicy, Throttle throttle, String key) throws Exception
     {
         InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(configValues.get(CONFIG_BUCKET.getKey()), key);
         InitiateMultipartUploadResult initResponse = s3Client.initiateMultipartUpload(initRequest);

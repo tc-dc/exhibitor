@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 import com.netflix.exhibitor.core.ExhibitorArguments;
 import com.netflix.exhibitor.core.backup.BackupProvider;
 import com.netflix.exhibitor.core.backup.filesystem.FileSystemBackupProvider;
+import com.netflix.exhibitor.core.backup.gcs.GcsBackupProvider;
 import com.netflix.exhibitor.core.backup.s3.S3BackupProvider;
 import com.netflix.exhibitor.core.config.AutoManageLockArguments;
 import com.netflix.exhibitor.core.config.ConfigProvider;
@@ -36,6 +37,7 @@ import com.netflix.exhibitor.core.config.s3.S3ConfigArguments;
 import com.netflix.exhibitor.core.config.s3.S3ConfigAutoManageLockArguments;
 import com.netflix.exhibitor.core.config.s3.S3ConfigProvider;
 import com.netflix.exhibitor.core.config.zookeeper.ZookeeperConfigProvider;
+import com.netflix.exhibitor.core.gcs.GcsClientFactory;
 import com.netflix.exhibitor.core.s3.PropertyBasedS3ClientConfig;
 import com.netflix.exhibitor.core.s3.PropertyBasedS3Credential;
 import com.netflix.exhibitor.core.s3.S3ClientFactoryImpl;
@@ -131,10 +133,18 @@ public class ExhibitorCreator
             awsClientConfig = new PropertyBasedS3ClientConfig(new File(commandLine.getOptionValue(S3_PROXY)));
         }
 
+        String configType = commandLine.hasOption(SHORT_CONFIG_TYPE) ? commandLine.getOptionValue(SHORT_CONFIG_TYPE) : (commandLine.hasOption(CONFIG_TYPE) ? commandLine.getOptionValue(CONFIG_TYPE) : null);
         BackupProvider backupProvider = null;
         if ( "true".equalsIgnoreCase(commandLine.getOptionValue(S3_BACKUP)) )
         {
-            backupProvider = new S3BackupProvider(new S3ClientFactoryImpl(), awsCredentials, awsClientConfig, s3Region);
+            if ( "gcs".equalsIgnoreCase(configType) )
+            {
+                backupProvider = new GcsBackupProvider(new GcsClientFactory());
+            }
+            else
+            {
+                backupProvider = new S3BackupProvider(new S3ClientFactoryImpl(), awsCredentials, awsClientConfig, s3Region);
+            }
         }
         else if ( "true".equalsIgnoreCase(commandLine.getOptionValue(FILESYSTEMBACKUP)) )
         {
@@ -149,7 +159,6 @@ public class ExhibitorCreator
         String extraHeadingText = commandLine.getOptionValue(EXTRA_HEADING_TEXT, null);
         boolean allowNodeMutations = "true".equalsIgnoreCase(commandLine.getOptionValue(NODE_MUTATIONS, "true"));
 
-        String configType = commandLine.hasOption(SHORT_CONFIG_TYPE) ? commandLine.getOptionValue(SHORT_CONFIG_TYPE) : (commandLine.hasOption(CONFIG_TYPE) ? commandLine.getOptionValue(CONFIG_TYPE) : null);
         if ( configType == null )
         {
             throw new MissingConfigurationTypeException("Configuration type (-" + SHORT_CONFIG_TYPE + " or --" + CONFIG_TYPE + ") must be specified", cli);
@@ -299,6 +308,10 @@ public class ExhibitorCreator
         {
             log.warn("Warning: you have intentionally turned off shared configuration. This mode is meant for special purposes only. Please verify that this is your intent.");
             configProvider = getNoneProvider(commandLine, defaultProperties);
+        }
+        else if ( configType.equals("gcs") )
+        {
+            configProvider = getGcsProvider(cli, commandLine, awsCredentials, awsClientConfig, useHostname, defaultProperties, s3Region);
         }
         else
         {
@@ -526,6 +539,12 @@ public class ExhibitorCreator
     {
         String  prefix = cli.getOptions().hasOption(S3_CONFIG_PREFIX) ? commandLine.getOptionValue(S3_CONFIG_PREFIX) : DEFAULT_PREFIX;
         return new S3ConfigProvider(new S3ClientFactoryImpl(), awsCredentials, awsClientConfig, getS3Arguments(cli, commandLine.getOptionValue(S3_CONFIG), prefix), hostname, defaultProperties, s3Region);
+    }
+
+    private ConfigProvider getGcsProvider(ExhibitorCLI cli, CommandLine commandLine, PropertyBasedS3Credential awsCredentials, PropertyBasedS3ClientConfig awsClientConfig, String hostname, Properties defaultProperties, String s3Region) throws Exception
+    {
+        String  prefix = cli.getOptions().hasOption(S3_CONFIG_PREFIX) ? commandLine.getOptionValue(S3_CONFIG_PREFIX) : DEFAULT_PREFIX;
+        return new S3ConfigProvider(new GcsClientFactory(), awsCredentials, awsClientConfig, getS3Arguments(cli, commandLine.getOptionValue(S3_CONFIG), prefix), hostname, defaultProperties, s3Region);
     }
 
     private void checkMutuallyExclusive(ExhibitorCLI cli, CommandLine commandLine, String option1, String option2) throws ExhibitorCreatorExit

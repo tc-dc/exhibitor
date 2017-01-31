@@ -22,6 +22,7 @@ dependencies {
     // if you are using Java 7 you can remove this and switch to the JDK version
     compile 'org.codehaus.jsr166-mirror:jsr166y:1.7.0'
 
+    compile "com.google.cloud:google-cloud-storage:0.8.1-beta"
     compile "com.amazonaws:aws-java-sdk:${awsVersion}"
     compile "com.sun.jersey:jersey-core:${jerseyVersion}"
     compile "com.sun.jersey:jersey-server:${jerseyVersion}"
